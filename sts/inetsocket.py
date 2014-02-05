@@ -36,9 +36,10 @@ class Socket(object):
             start_line, headers, body = inetmsg.read_message(fd)
             if isinstance(start_line, inetmsg.StatusLine):
                 self._handle_response(start_line, headers, body)
-                continue
+            else:
+                queue.put((start_line, headers, body))
 
-            queue.put((start_line, headers, body))
+            gevent.sleep(0.00001)
 
     def _handle_response(self, start_line, headers, body):
         try:
