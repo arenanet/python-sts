@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import gevent
 import gevent.queue
+import gevent.socket
 import itertools
 from . import inetheaders, inetmsg, ineterr
 
@@ -24,6 +25,7 @@ class Socket(object):
 
     def attach_socket(self, socket):
         assert(self._socket is None)
+        assert(type(socket) is gevent.socket.socket)
         self._socket = socket
         self._send_queue = gevent.queue.Queue()
         self._send_greenlet = gevent.spawn(self._send_worker, socket, self._send_queue)
@@ -36,10 +38,9 @@ class Socket(object):
             start_line, headers, body = inetmsg.read_message(fd)
             if isinstance(start_line, inetmsg.StatusLine):
                 self._handle_response(start_line, headers, body)
-            else:
-                queue.put((start_line, headers, body))
+                continue
 
-            gevent.sleep(0.00001)
+            queue.put((start_line, headers, body))
 
     def _handle_response(self, start_line, headers, body):
         try:
