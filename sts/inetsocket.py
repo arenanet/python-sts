@@ -167,7 +167,7 @@ class Socket(object):
         request_line = inetmsg.RequestLine(method='P', uri='/%s/%s' % (protocol, command))
         self._send(self._send_queue, request_line, headers, body)
 
-    def _request(self, protocol, command, headers = False, body = False, timeout = False):
+    def _request(self, protocol, command, headers = False, body = False, timeout = None):
 
         txn_id                   = self._txn_id.next()
         self._txn_queues[txn_id] = pqueue.Queue()
@@ -237,11 +237,11 @@ class Socket(object):
 
         return err, msg
 
-    def request_many(self, protocol, command, headers = False, body = False, timeout = False):
+    def request_many(self, protocol, command, headers = False, body = False, timeout = None):
 
         return self._request(protocol, command, headers, body, timeout)
 
-    def request_one(self, protocol, command, headers = False, body = False, timeout = False):
+    def request_one(self, protocol, command, headers = False, body = False, timeout = None):
 
         err, msg = self._request_one(protocol, command, headers, body, timeout)
 
@@ -250,7 +250,7 @@ class Socket(object):
 
         return err, msg
 
-    def request_none(self, protocol, command, headers = False, body = False, timeout = False):
+    def request_none(self, protocol, command, headers = False, body = False, timeout = None):
 
         err, msg = self._request_one(protocol, command, headers, body, timeout)
 
