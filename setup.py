@@ -4,7 +4,6 @@ from setuptools import setup, find_packages
 
 setup(
     name='python-sts',
-    version='0.1',
-    packages=find_packages(),
-    install_requires=['gevent']
+    version='0.2',
+    packages=find_packages()
 )
