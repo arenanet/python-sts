@@ -177,54 +177,82 @@ class Socket(object):
 
         self.send(protocol, command, headers, body)
 
-        next_seq = False
-        while True:
+        try:
 
-            try:
-                err, start_line, headers, body = self._read(self._txn_queues[txn_id], timeout)
+            body_result = False
+            next_seq = False
+            while True:
 
-            except pqueue.Empty:
-                yield ineterr.err(ineterr.TIMEOUT), None
-                break
+                try:
+                    err, start_line, headers, body = self._read(self._txn_queues[txn_id], timeout)
 
-            finally:
-                del self._txn_queues[txn_id]
+                except pqueue.Empty:
+                    yield ineterr.err(ineterr.TIMEOUT), None
+                    break
 
-            if (isinstance(start_line, inetmsg.RequestLine)):
-                err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, received request')
+                if (isinstance(start_line, inetmsg.RequestLine)):
+                    err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, received request')
 
-            subject = headers[inetheaders.SUBJECT].split(';')[0]
+                subject = headers[inetheaders.SUBJECT].split(';')[0]
 
-            try:
-                __, seq = subject.lower().split('r')
-                seq = int(seq) if seq else False
+                try:
+                    __, seq = subject.lower().split('r')
+                    seq = int(seq) if seq else False
 
-            except ValueError:
-                err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, malformed subject')
+                except ValueError:
+                    err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, malformed subject')
 
-            if (not seq and next_seq):
-                err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, out of sequence')
-            elif (next_seq and seq != next_seq):
-                err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, out of sequence')
-            elif (seq and seq != 1 and not next_seq):
-                err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, out of sequence')
-            elif (seq):
-                next_seq = seq + 1
+                if (not seq and next_seq):
+                    err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, out of sequence')
+                elif (next_seq and seq != next_seq):
+                    err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, out of sequence')
+                elif (seq and seq != 1 and not next_seq):
+                    err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, out of sequence')
+                elif (seq):
+                    next_seq = seq + 1
 
-            complete = 'R' in subject
-            if (not seq and not complete):
-                err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, invalid seq')
+                complete = 'R' in subject
+                if (not seq and not complete):
+                    err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, invalid seq')
 
-            if (err.code != ineterr.SUCCESS and not complete):
-                err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, pending error')
+                if (err.code != ineterr.SUCCESS and not complete):
+                    err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, pending error')
 
-            if (body):
-                yield err, (headers, body)
-            else:
-                yield err, None
+                if (inetheaders.CONTENT_RANGE in headers):
 
-            if (err.code != ineterr.SUCCESS or complete):
-                break
+                    raw_range       = headers[inetheaders.CONTENT_RANGE]
+                    type_segments   = raw_range.split(' ')
+                    range_segments  = type_segments[1].split('/')
+                    numerator_range = range_segments[0].split('-')
+                    start_range     = int(numerator_range[0])
+                    end_range       = int(numerator_range[1])
+                    denominator     = int(range_segments[1])
+
+                    if (start_range == 0):
+                        body_result = body
+                    else:
+                        body_result += body
+
+                    if ((end_range + 1) == denominator):
+
+                        if (not len(body_result) == denominator):
+                            err = ineterr.err(ineterr.BAD_SERVER_DATA, '_request, invalid chunked result')
+
+                        yield err, (headers, body_result)
+
+                    continue
+
+                if (body):
+                    yield err, (headers, body)
+                else:
+                    yield err, None
+
+                if (err.code != ineterr.SUCCESS or complete):
+                    break
+
+        finally:
+            del self._txn_queues[txn_id]
+
 
     def _request_one(self, protocol, command, headers, body, timeout):
 
