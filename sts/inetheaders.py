@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 class Header(str):
-    def __init__(self, name):
-        str.__init__(self, name)
-        self.normalized = name.lower().strip()
+    def __new__(cls, name, *args, **kw):
+        obj = str.__new__(cls, name, *args, **kw)
+        obj.normalized = name.lower().strip()
+        return obj
 
     def __hash__(self):
         return hash(self.normalized)
@@ -51,7 +52,7 @@ COMPACT_HEADERS = dict([(Header(key), value) for key, value in {
     'X-Trace-ID': TRACE,
     'Transfer-Encoding': TRANSFER_ENCODING,
     'Via': VIA
-}.iteritems()])
+}.items()])
 
 
 MULTI_HEADERS = frozenset([Header(name) for name in [
