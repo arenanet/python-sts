@@ -1,16 +1,24 @@
 # -*- coding: utf-8 -*-
 
-class Header(str):
+class Header(object):
+
     def __init__(self, name):
-        str.__init__(self, name)
-        self.normalized = name.lower().strip()
+
+        if (isinstance(name, Header)):
+            name = name.normalized
+
+        name            = name.strip()
+        self.normalized = name.lower()
 
     def __hash__(self):
         return hash(self.normalized)
 
     def __eq__(self, right):
+        assert isinstance(right, Header), 'Invalid Comparison'
         return self.normalized == right.normalized
 
+    def __str__(self):
+        return self.normalized
 
 ACCEPT = Header('a')
 CONTENT_ENCODING = Header('e')
@@ -51,7 +59,7 @@ COMPACT_HEADERS = dict([(Header(key), value) for key, value in {
     'X-Trace-ID': TRACE,
     'Transfer-Encoding': TRANSFER_ENCODING,
     'Via': VIA
-}.iteritems()])
+}.items()])
 
 
 MULTI_HEADERS = frozenset([Header(name) for name in [
