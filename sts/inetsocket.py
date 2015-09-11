@@ -18,8 +18,10 @@ class Socket(object):
         self._socket = None
         self.attach_socket(socket)
 
-    def detach_socket(self):
+    def is_closed(self):
+        return self._cancel.is_set()
 
+    def detach_socket(self):
         assert self._socket, 'Invalid Socket State'
 
         self._cancel.set()
@@ -30,7 +32,6 @@ class Socket(object):
         return socket
 
     def attach_socket(self, socket):
-
         assert not self._socket, 'Invalid Socket State'
 
         self._socket = socket
@@ -48,8 +49,6 @@ class Socket(object):
         self._read_thread.start()
 
     def _read_worker(self, socket, queue, cancel):
-
-        import errno
 
         fd = socket.makefile('rb')
 
